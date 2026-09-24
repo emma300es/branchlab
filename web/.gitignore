@@ -1,0 +1,9 @@
+node_modules/
+.next/
+*.tsbuildinfo
+.env.local
+.env.*.local
+.smoke-*/
+.smoke-*.png
+playwright-report/
+test-results/

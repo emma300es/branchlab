@@ -1,0 +1,255 @@
+{
+  "$defs": {
+    "Assertion": {
+      "additionalProperties": false,
+      "properties": {
+        "step_id": {
+          "title": "Step Id",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "status",
+            "json"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "operator": {
+          "enum": [
+            "eq",
+            "ne"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "expected_json": {
+          "title": "Expected Json",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_id",
+        "target",
+        "path",
+        "operator",
+        "expected_json"
+      ],
+      "title": "Assertion",
+      "type": "object"
+    },
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "line_start": {
+          "minimum": 1,
+          "title": "Line Start",
+          "type": "integer"
+        },
+        "line_end": {
+          "minimum": 1,
+          "title": "Line End",
+          "type": "integer"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "revision": {
+          "enum": [
+            "base",
+            "head"
+          ],
+          "title": "Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "line_start",
+        "line_end",
+        "quote",
+        "revision"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "Header": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "Header",
+      "type": "object"
+    },
+    "Probe": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "invariant": {
+          "title": "Invariant",
+          "type": "string"
+        },
+        "intent": {
+          "enum": [
+            "preserve",
+            "change",
+            "unknown"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        },
+        "assertions": {
+          "items": {
+            "$ref": "#/$defs/Assertion"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Assertions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "invariant",
+        "intent",
+        "severity",
+        "rationale",
+        "citations",
+        "steps",
+        "assertions"
+      ],
+      "title": "Probe",
+      "type": "object"
+    },
+    "Step": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "headers": {
+          "items": {
+            "$ref": "#/$defs/Header"
+          },
+          "title": "Headers",
+          "type": "array"
+        },
+        "body_json": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Body Json"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "path",
+        "headers",
+        "body_json"
+      ],
+      "title": "Step",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "intent_summary": {
+      "title": "Intent Summary",
+      "type": "string"
+    },
+    "probes": {
+      "items": {
+        "$ref": "#/$defs/Probe"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "title": "Probes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "intent_summary",
+    "probes"
+  ],
+  "title": "Plan",
+  "type": "object"
+}

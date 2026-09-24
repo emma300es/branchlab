@@ -1,0 +1,148 @@
+{
+  "intent_summary": "TTL should double to 120 seconds. Tenant isolation and health behavior must survive.",
+  "probes": [
+    {
+      "id": "tenant-isolation",
+      "title": "Cache hits must stay inside tenant boundaries",
+      "invariant": "Each tenant only receives its own notes, including cached responses.",
+      "intent": "preserve",
+      "severity": "high",
+      "rationale": "A tenant-free cache key can reuse alpha's cached note for beta's request.",
+      "citations": [
+        {
+          "path": "CONTRACT.md",
+          "line_start": 2,
+          "line_end": 2,
+          "quote": "Each tenant must only receive its own notes, including on cache hits.",
+          "revision": "head"
+        },
+        {
+          "path": "CHANGE.md",
+          "line_start": 3,
+          "line_end": 3,
+          "quote": "Tenant isolation must remain unchanged; no client should receive another tenant's data.",
+          "revision": "head"
+        }
+      ],
+      "steps": [
+        {
+          "id": "health",
+          "method": "GET",
+          "path": "/health",
+          "headers": [],
+          "body_json": null
+        },
+        {
+          "id": "warm-alpha",
+          "method": "GET",
+          "path": "/notes/1",
+          "headers": [
+            {
+              "name": "x-tenant",
+              "value": "alpha"
+            }
+          ],
+          "body_json": null
+        },
+        {
+          "id": "read-beta",
+          "method": "GET",
+          "path": "/notes/1",
+          "headers": [
+            {
+              "name": "x-tenant",
+              "value": "beta"
+            }
+          ],
+          "body_json": null
+        }
+      ],
+      "assertions": [
+        {
+          "step_id": "read-beta",
+          "target": "json",
+          "path": "tenant",
+          "operator": "eq",
+          "expected_json": "\"beta\""
+        },
+        {
+          "step_id": "read-beta",
+          "target": "json",
+          "path": "content",
+          "operator": "eq",
+          "expected_json": "\"beta-private-note\""
+        }
+      ]
+    },
+    {
+      "id": "cache-expiration",
+      "title": "Cache TTL intentionally increases",
+      "invariant": "The old TTL is 60 seconds; the change request explicitly replaces it with 120.",
+      "intent": "change",
+      "severity": "low",
+      "rationale": "Use the prior expectation to demonstrate the change; the PR explicitly permits it.",
+      "citations": [
+        {
+          "path": "CHANGE.md",
+          "line_start": 2,
+          "line_end": 2,
+          "quote": "Increase cache TTL from 60 to 120 seconds and simplify the cache key for faster lookup.",
+          "revision": "head"
+        }
+      ],
+      "steps": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "/settings",
+          "headers": [],
+          "body_json": null
+        }
+      ],
+      "assertions": [
+        {
+          "step_id": "settings",
+          "target": "json",
+          "path": "cache_ttl",
+          "operator": "eq",
+          "expected_json": "60"
+        }
+      ]
+    },
+    {
+      "id": "health-stability",
+      "title": "Health endpoint stays stable",
+      "invariant": "Health returns status ok.",
+      "intent": "preserve",
+      "severity": "low",
+      "rationale": "A control probe verifies an unaffected documented behavior.",
+      "citations": [
+        {
+          "path": "CONTRACT.md",
+          "line_start": 3,
+          "line_end": 3,
+          "quote": "The /health endpoint must return status ok.",
+          "revision": "head"
+        }
+      ],
+      "steps": [
+        {
+          "id": "health",
+          "method": "GET",
+          "path": "/health",
+          "headers": [],
+          "body_json": null
+        }
+      ],
+      "assertions": [
+        {
+          "step_id": "health",
+          "target": "json",
+          "path": "status",
+          "operator": "eq",
+          "expected_json": "\"ok\""
+        }
+      ]
+    }
+  ]
+}
