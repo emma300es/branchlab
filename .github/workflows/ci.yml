@@ -35,6 +35,8 @@ jobs:
         with:
           name: fixture-evaluation
           path: .branchlab/evaluation
+          # Only authored fixtures live here. Preserve their Git objects for replay.
+          include-hidden-files: true
           retention-days: 7
   dashboard:
     runs-on: ubuntu-latest
@@ -88,5 +90,9 @@ jobs:
         if: always()
         with:
           name: docker-evidence
-          path: .branchlab/runs
+          path: |
+            .branchlab/runs
+            .branchlab/docker-fixture
+          # This is the generated demo Git repository, not the checkout's credentials.
+          include-hidden-files: true
           retention-days: 7
