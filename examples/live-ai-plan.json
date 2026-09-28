@@ -1,0 +1,350 @@
+{
+  "intent_summary": "The TTL constant intentionally changes from 60 to 120, although the unchanged contract still documents 60 and the source implements no timed expiration. Preserve tenant isolation, tenant validation, missing-note handling, and health behavior. Assert the base settings value to expose the intentional change and use sequential tenant requests to expose accidental cross-tenant cache reuse.",
+  "probes": [
+    {
+      "id": "tenant-cache-isolation",
+      "title": "Cache hits remain scoped to the requesting tenant",
+      "invariant": "Each successful note lookup returns only the requesting tenant's note, including after another tenant requests the same note ID.",
+      "intent": "preserve",
+      "severity": "high",
+      "rationale": "The base cache key includes the tenant; head uses only the note ID. Sequential requests exercise the shared cache collision without timing assumptions. The unchanged contract explicitly requires isolation on cache hits.",
+      "citations": [
+        {
+          "path": "CONTRACT.md",
+          "line_start": 1,
+          "line_end": 2,
+          "quote": "# Tenant notes service contract\nEach tenant must only receive its own notes, including on cache hits.",
+          "revision": "base"
+        },
+        {
+          "path": "service.py",
+          "line_start": 20,
+          "line_end": 25,
+          "quote": "    key = (x_tenant, note_id)\n    if key not in cache:\n        if note_id not in records[x_tenant]:\n            raise HTTPException(404, \"Not found\")\n        cache[key] = {\"tenant\": x_tenant, \"content\": records[x_tenant][note_id]}\n    return cache[key]",
+          "revision": "base"
+        },
+        {
+          "path": "service.py",
+          "line_start": 20,
+          "line_end": 25,
+          "quote": "    key = note_id\n    if key not in cache:\n        if note_id not in records[x_tenant]:\n            raise HTTPException(404, \"Not found\")\n        cache[key] = {\"tenant\": x_tenant, \"content\": records[x_tenant][note_id]}\n    return cache[key]",
+          "revision": "head"
+        },
+        {
+          "path": "service.py",
+          "line_start": 6,
+          "line_end": 6,
+          "quote": "records = {\"alpha\": {\"1\": \"alpha-private-note\"}, \"beta\": {\"1\": \"beta-private-note\"}}",
+          "revision": "base"
+        }
+      ],
+      "steps": [
+        {
+          "id": "alpha",
+          "method": "GET",
+          "path": "/notes/1",
+          "headers": [
+            {
+              "name": "x-tenant",
+              "value": "alpha"
+            }
+          ],
+          "body_json": null
+        },
+        {
+          "id": "beta",
+          "method": "GET",
+          "path": "/notes/1",
+          "headers": [
+            {
+              "name": "x-tenant",
+              "value": "beta"
+            }
+          ],
+          "body_json": null
+        },
+        {
+          "id": "alpha-again",
+          "method": "GET",
+          "path": "/notes/1",
+          "headers": [
+            {
+              "name": "x-tenant",
+              "value": "alpha"
+            }
+          ],
+          "body_json": null
+        }
+      ],
+      "assertions": [
+        {
+          "step_id": "alpha",
+          "target": "status",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "200"
+        },
+        {
+          "step_id": "alpha",
+          "target": "json",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "{\"tenant\":\"alpha\",\"content\":\"alpha-private-note\"}"
+        },
+        {
+          "step_id": "beta",
+          "target": "status",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "200"
+        },
+        {
+          "step_id": "beta",
+          "target": "json",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "{\"tenant\":\"beta\",\"content\":\"beta-private-note\"}"
+        },
+        {
+          "step_id": "alpha-again",
+          "target": "status",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "200"
+        },
+        {
+          "step_id": "alpha-again",
+          "target": "json",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "{\"tenant\":\"alpha\",\"content\":\"alpha-private-note\"}"
+        }
+      ]
+    },
+    {
+      "id": "settings-ttl",
+      "title": "Settings exposes the base TTL value",
+      "invariant": "The base settings response reports cache_ttl as 60.",
+      "intent": "change",
+      "severity": "low",
+      "rationale": "The source explicitly changes the constant to 120, consistent with the change document, so this base assertion should fail intentionally on head. The unchanged contract still says 60. This checks advertised configuration only: neither revision contains expiration logic, so actual cache lifetime cannot be inferred or tested from this constant.",
+      "citations": [
+        {
+          "path": "service.py",
+          "line_start": 4,
+          "line_end": 4,
+          "quote": "CACHE_TTL = 60",
+          "revision": "base"
+        },
+        {
+          "path": "service.py",
+          "line_start": 4,
+          "line_end": 4,
+          "quote": "CACHE_TTL = 120",
+          "revision": "head"
+        },
+        {
+          "path": "service.py",
+          "line_start": 12,
+          "line_end": 14,
+          "quote": "@app.get(\"/settings\")\ndef settings():\n    return {\"cache_ttl\": CACHE_TTL}",
+          "revision": "base"
+        },
+        {
+          "path": "CHANGE.md",
+          "line_start": 1,
+          "line_end": 2,
+          "quote": "# Change request: longer cache lifetime\nIncrease cache TTL from 60 to 120 seconds and simplify the cache key for faster lookup.",
+          "revision": "head"
+        }
+      ],
+      "steps": [
+        {
+          "id": "settings",
+          "method": "GET",
+          "path": "/settings",
+          "headers": [],
+          "body_json": null
+        }
+      ],
+      "assertions": [
+        {
+          "step_id": "settings",
+          "target": "status",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "200"
+        },
+        {
+          "step_id": "settings",
+          "target": "json",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "{\"cache_ttl\":60}"
+        }
+      ]
+    },
+    {
+      "id": "unknown-tenant-cached-note",
+      "title": "A cached note does not bypass tenant validation",
+      "invariant": "An unknown tenant receives 403 even when the requested note ID is cached.",
+      "intent": "preserve",
+      "severity": "high",
+      "rationale": "Both revisions validate tenant membership before accessing the cache. Warming a known note first checks that the simplified key does not bypass that guard. The tenant header is application routing data, not a security credential.",
+      "citations": [
+        {
+          "path": "service.py",
+          "line_start": 16,
+          "line_end": 25,
+          "quote": "@app.get(\"/notes/{note_id}\")\ndef note(note_id: str, x_tenant: str = Header()):\n    if x_tenant not in records:\n        raise HTTPException(403, \"Unknown tenant\")\n    key = (x_tenant, note_id)\n    if key not in cache:\n        if note_id not in records[x_tenant]:\n            raise HTTPException(404, \"Not found\")\n        cache[key] = {\"tenant\": x_tenant, \"content\": records[x_tenant][note_id]}\n    return cache[key]",
+          "revision": "base"
+        }
+      ],
+      "steps": [
+        {
+          "id": "warm",
+          "method": "GET",
+          "path": "/notes/1",
+          "headers": [
+            {
+              "name": "x-tenant",
+              "value": "alpha"
+            }
+          ],
+          "body_json": null
+        },
+        {
+          "id": "unknown",
+          "method": "GET",
+          "path": "/notes/1",
+          "headers": [
+            {
+              "name": "x-tenant",
+              "value": "unknown"
+            }
+          ],
+          "body_json": null
+        }
+      ],
+      "assertions": [
+        {
+          "step_id": "warm",
+          "target": "status",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "200"
+        },
+        {
+          "step_id": "unknown",
+          "target": "status",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "403"
+        },
+        {
+          "step_id": "unknown",
+          "target": "json",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "{\"detail\":\"Unknown tenant\"}"
+        }
+      ]
+    },
+    {
+      "id": "missing-note",
+      "title": "A missing note remains not found",
+      "invariant": "A known tenant requesting an absent note receives 404.",
+      "intent": "preserve",
+      "severity": "medium",
+      "rationale": "The supplied records contain only note 1 for each tenant, and the cache-miss branch explicitly rejects absent notes. Note 2 exercises that branch without depending on cache lifetime.",
+      "citations": [
+        {
+          "path": "service.py",
+          "line_start": 6,
+          "line_end": 6,
+          "quote": "records = {\"alpha\": {\"1\": \"alpha-private-note\"}, \"beta\": {\"1\": \"beta-private-note\"}}",
+          "revision": "base"
+        },
+        {
+          "path": "service.py",
+          "line_start": 21,
+          "line_end": 23,
+          "quote": "    if key not in cache:\n        if note_id not in records[x_tenant]:\n            raise HTTPException(404, \"Not found\")",
+          "revision": "base"
+        }
+      ],
+      "steps": [
+        {
+          "id": "missing",
+          "method": "GET",
+          "path": "/notes/2",
+          "headers": [
+            {
+              "name": "x-tenant",
+              "value": "alpha"
+            }
+          ],
+          "body_json": null
+        }
+      ],
+      "assertions": [
+        {
+          "step_id": "missing",
+          "target": "status",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "404"
+        },
+        {
+          "step_id": "missing",
+          "target": "json",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "{\"detail\":\"Not found\"}"
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "title": "Health remains available without tenant headers",
+      "invariant": "GET /health returns 200 with status ok.",
+      "intent": "preserve",
+      "severity": "low",
+      "rationale": "The health handler is unchanged and has no header dependency. Its source directly supports preserving the response independently of the PR claim.",
+      "citations": [
+        {
+          "path": "service.py",
+          "line_start": 8,
+          "line_end": 10,
+          "quote": "@app.get(\"/health\")\ndef health():\n    return {\"status\": \"ok\"}",
+          "revision": "base"
+        }
+      ],
+      "steps": [
+        {
+          "id": "health",
+          "method": "GET",
+          "path": "/health",
+          "headers": [],
+          "body_json": null
+        }
+      ],
+      "assertions": [
+        {
+          "step_id": "health",
+          "target": "status",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "200"
+        },
+        {
+          "step_id": "health",
+          "target": "json",
+          "path": "",
+          "operator": "eq",
+          "expected_json": "{\"status\":\"ok\"}"
+        }
+      ]
+    }
+  ]
+}

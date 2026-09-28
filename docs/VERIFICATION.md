@@ -10,9 +10,17 @@ This document distinguishes checks of real execution from mocks and untested int
 - Frontend tests cover data/proxy behavior; type checking and production build check the dashboard bundle.
 - The included CI builds the Docker worker and runs the authored demo inside it. Runtime results are available in GitHub Actions; constructing the correct Docker command alone is not a sandbox execution test.
 
-## Live-model limitation in this build environment
+## Live AI verified — September 28, 2026
 
-No `OPENAI_API_KEY` was configured. A trusted-fixture Codex planner attempt reached the standalone CLI but returned HTTP 401. No live AI plan was produced, and no credential/login settings were changed to force access. The adapter remains usable with separately configured provider access. All fixture reports are marked `live_ai: false`.
+The v0.1 standalone Codex attempt returned 401. That limitation is now resolved through OpenClaw's supported tool-free inference route using the existing provider connection—no credential copying or changes.
+
+An actual GPT-6 Astra completion generated the [saved five-probe plan](../examples/live-ai-plan.json). Real repeated execution produced one suspected tenant-data regression, one intentional TTL change, and three controls with no observed regression. All citations matched the supplied source. See the [sanitized receipt](../examples/live-ai-receipt.json), including immutable SHAs, timestamp, provider and outcomes. The initial host run uses the authored trusted fixture in subprocess mode, not a claim of local Docker isolation. CI independently replays this exact plan in Docker; it labels that execution as supplied-plan, not a new AI call.
+
+OpenClaw's CLI does not return usage or enforce structured output; token counts are unknown, and BranchLab performs local JSON/Pydantic validation. Hosted/container deployments without OpenClaw can use the existing tool-free Responses adapter with a separately configured API key.
+
+## GitHub App and hosted-mode scope
+
+Tests exercise raw-body signature verification, repository/installation identity, durable deduplication and queue recovery, immutable snapshots, bounded Check Runs, API bearer checks, owner session login/logout and CSRF/Host rejection. Mock GitHub tests do not constitute an installed App. This environment has no GitHub App ID/private key/installation configuration and no selected public DNS origin. Those external setup steps remain distinct from completed code and local/CI execution checks.
 
 ## First verified build
 

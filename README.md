@@ -4,7 +4,9 @@
 
 BranchLab investigates **what a pull request changes**, then tests whether that change contradicts a documented contract. It produces source-grounded hypotheses, executes the same request sequences against immutable base/head revisions, and keeps replayable evidence.
 
-This is a working vertical slice for **Python/FastAPI applications**, not a general-purpose autonomous code reviewer. It does not generate or execute model-written Python.
+BranchLab v0.2 targets **Python/FastAPI applications**, not arbitrary code-review tasks. It includes live model planning, an installable GitHub App receiver/worker, and an authenticated single-owner dashboard. It does not generate or execute model-written Python.
+
+**Verified live:** GPT-6 Astra generated five probes that detected the tenant leak, distinguished the intentional TTL change, and passed three controls. [Exact plan](examples/live-ai-plan.json) · [dated evidence receipt](examples/live-ai-receipt.json). GitHub App registration and public hosting still require your installation credentials and a server/DNS origin; code availability is not a claim that an App has been installed.
 
 ## The demo
 
@@ -14,7 +16,7 @@ A developer raises a cache TTL and “simplifies” a cache key. BranchLab separ
 - **Intentional change:** TTL moves from 60 to 120 seconds, exactly as requested.
 - **No observed regression:** the documented health response remains stable.
 
-The failing sequence is reduced from three requests to two. Each finding includes exact source citations, repeated paired traces, a machine-readable probe and a replay command. The dashboard shows those measured results—not generated success stories.
+The authored demo's failing sequence is reduced from three requests to two. The separately generated live AI plan retains three asserted requests; minimization does not delete asserted checks to claim a smaller result. Each finding includes exact source citations, repeated paired traces, a machine-readable probe and a replay command.
 
 ![BranchLab evidence workbench showing paired tenant-cache traces](docs/dashboard.png)
 
@@ -46,7 +48,15 @@ The bundled demo is authored, trusted code. Its subprocess runner **is not a san
 
 ## Live AI planning
 
-Set `OPENAI_API_KEY` in your local environment (never commit it), then:
+If OpenClaw already has a working provider connection, no separate API key is needed:
+
+```sh
+branchlab demo --provider openclaw --model openai/gpt-6-astra
+```
+
+This uses the supported `openclaw infer model run` **tool-free one-shot completion**, not an agent session or inherited chat history. It uses OpenClaw's credential resolver without copying credentials. Its text is validated against the Plan schema locally; the CLI does not offer API-level structured-output enforcement or token usage. Usage stays unknown, not zero. Set `BRANCHLAB_OPENCLAW_AGENT` to select a configured agent account (default `main`). The CLI's prompt is an argument visible to this host's process inspection; the adapter rejects inputs over 110 KB. Use Responses for larger contexts or stricter transport requirements.
+
+Alternatively, set `OPENAI_API_KEY` in your local environment (never commit it):
 
 ```sh
 branchlab demo --provider openai --model gpt-6-astra
@@ -84,7 +94,17 @@ branchlab pr https://github.com/OWNER/REPO/pull/123 \
   .branchlab/checkouts/pr-123 --app service:app
 ```
 
-BranchLab fetches immutable base/head SHAs, verifies the PR did not change mid-fetch, and investigates that snapshot. It **does not post comments, approve, merge, or push to the source repository**. The current integration is a CLI adapter, not an installed webhook GitHub App.
+The CLI fetches immutable base/head SHAs, rejects snapshot races, and keeps findings locally. It does not comment, approve, merge or push to the source repository.
+
+### GitHub App
+
+The [GitHub App integration](docs/GITHUB_APP.md) adds HMAC-verified webhooks, an installation/repository allowlist, a persistent SQLite queue, installation-scoped tokens and Check Runs. The dashboard can also submit an allowlisted PR. App jobs always execute in Docker and use a tool-free live planner; missing Docker/model access produces an incomplete result, never an unsafe fallback. No automatic source edits or merges.
+
+Configure the App once, then run `branchlab app-worker` separately from `branchlab serve`. Register/install using the supplied manifest and your GitHub owner account. The existing `gh` login is **not** a GitHub App installation.
+
+### Hosted dashboard
+
+[Deployment instructions](docs/DEPLOYMENT.md) cover HTTPS, owner login, signed sessions, server-only API authentication and Docker Compose. `compose.yml` includes the dashboard, evidence API, Caddy HTTPS proxy and optional App worker. No anonymous evidence access; no repository-controlled configuration or arbitrary shell endpoint. Keep local mode bound to loopback.
 
 The included GitHub Actions workflow tests Python, builds the dashboard, and executes the authored demo in Docker. Its evidence is uploaded as a workflow artifact.
 
@@ -143,6 +163,6 @@ The evaluation is a small, named set of authored fixtures with real executions. 
 - Exact citation matching proves that text exists, not that the model interpreted it correctly.
 - Two to five repeats detect observed inconsistencies, not every flaky condition. Passing probes do not prove absence of regressions.
 - Reports can contain application responses and source quotes. Keep them private when investigating sensitive repositories.
-- The API/dashboard are local, single-user tools without authentication or multi-tenant isolation. Do not expose them publicly as-is.
+- Hosted mode is authenticated and single-owner, not multi-tenant. GitHub App execution should run on a dedicated worker host; its trusted controller needs Docker access, but investigated containers never receive the socket or credentials.
 
 See [architecture](docs/ARCHITECTURE.md), [security boundaries](SECURITY.md), and [verification status](docs/VERIFICATION.md).

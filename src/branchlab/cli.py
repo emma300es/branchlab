@@ -30,7 +30,10 @@ def plan_for(context, description, plan_file, provider, model, trusted_local):
     if provider == "codex":
         from .providers import build_plan_codex
         return build_plan_codex(context, description, model=model, trusted_context=trusted_local)
-    raise ValueError("provider must be openai or codex (or supply --plan)")
+    if provider == "openclaw":
+        from .providers import build_plan_openclaw
+        return build_plan_openclaw(context, description, model=model)
+    raise ValueError("provider must be openai, openclaw or codex (or supply --plan)")
 
 
 @app.command()
@@ -144,11 +147,31 @@ def replay(report: str, repo: Annotated[Path, typer.Option("--repo")], case: str
 
 
 @app.command()
-def serve(host: str = "127.0.0.1", port: int = 8765, data: Path = DEFAULT_OUTPUT):
-    """Serve the evidence API. Keep loopback binding unless behind your own access controls."""
+def serve(host: str = "127.0.0.1", port: int = 8765, data: Path | None = None):
+    """Serve evidence locally or behind the configured authenticated HTTPS dashboard."""
+    import os
+    if host not in {"127.0.0.1", "localhost", "::1"} and not os.environ.get("BRANCHLAB_PUBLIC_ORIGIN"):
+        raise typer.BadParameter("Non-loopback binding requires BRANCHLAB_PUBLIC_ORIGIN and API authentication")
     import uvicorn
     from .api import create_app
     uvicorn.run(create_app(data), host=host, port=port)
+
+
+@app.command("app-worker")
+def app_worker(once: bool = False, poll_seconds: int = 5):
+    """Process the durable GitHub App queue; repository execution always uses Docker."""
+    import time
+    from .github_app import AppConfig, AppWorker, JobQueue
+    if not 1 <= poll_seconds <= 60:
+        raise typer.BadParameter("poll-seconds must be between 1 and 60")
+    config = AppConfig.from_env()
+    queue = JobQueue(config.state_dir / "queue.sqlite3")
+    worker = AppWorker(config, queue)
+    while True:
+        worker.run_once()
+        if once:
+            return
+        time.sleep(poll_seconds)
 
 
 @app.command()

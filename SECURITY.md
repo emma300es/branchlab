@@ -20,13 +20,17 @@ The optional Codex adapter is only for explicitly trusted context. It uses an em
 
 ## Local services and evidence
 
-The API binds loopback by default, validates Host headers, restricts artifact paths, rejects symlinked reports, and provides no general repository-execution endpoint. The Next.js proxy forwards only allowlisted routes to the configured local API. Neither service has authentication: do not expose it to other users or the internet without a separate access-control layer.
+The API binds loopback by default, validates Host headers, restricts artifact paths and rejects symlinked reports. Hosted mode requires an explicit HTTPS origin and server bearer token. The Next.js dashboard requires a strong owner token, uses signed expiring HttpOnly/SameSite sessions, checks exact origins for mutations and forwards its own server token only to the fixed backend. It provides no arbitrary repository path or command endpoint. PR submission is limited to installation/repository IDs in operator configuration.
+
+GitHub webhooks have a separate raw-body HMAC boundary and body limit; they only enqueue durable metadata. Work occurs in a separate trusted controller. The Compose worker has Docker socket access, equivalent to privileged control of that dedicated host. Test containers never inherit the socket or provider/App credentials. Use a dedicated worker host rather than a shared machine containing unrelated accounts.
 
 Reports contain responses, source quotes, paths and probe inputs. They are intentionally useful evidence and may contain sensitive application data. `.branchlab/`, `.env` files and local evidence are ignored by Git. GitHub Actions artifacts from the sample workflow contain only authored fixture data; adapt retention and access controls before adding private repository evidence.
 
 ## GitHub permissions
 
 PR ingestion reads through `gh` and Git. It does not create comments, reviews, commits, approvals or merges in the target repository. It captures and verifies immutable revisions, rejects ambiguous URLs and mid-fetch PR updates, and disables hooks and automatic checkout. GitHub Actions uses `contents: read`; it does not use `pull_request_target` or execute external PR code with privileged credentials.
+
+The optional App mode instead uses short-lived installation tokens scoped to allowed repository IDs with contents/pull-requests read and checks write. It publishes Check Runs, not comments or approvals. Webhook-provided clone URLs, executable settings, tokens and app entry points are never trusted. PR metadata is rechecked around fetch and before reporting. Provider errors are sanitized; check summaries omit response bodies, source quotes and host paths.
 
 ## Reporting
 

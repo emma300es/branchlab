@@ -1,0 +1,88 @@
+name: branchlab
+
+x-api-environment: &api-environment
+  BRANCHLAB_PUBLIC_ORIGIN: ${BRANCHLAB_PUBLIC_ORIGIN:?Set the HTTPS dashboard origin}
+  BRANCHLAB_API_TOKEN: ${BRANCHLAB_API_TOKEN:?Set a random server API token}
+  BRANCHLAB_DATA_DIR: /data/runs
+  BRANCHLAB_GITHUB_STATE_DIR: /data/github
+  BRANCHLAB_GITHUB_APP_ID: ${BRANCHLAB_GITHUB_APP_ID:-}
+  BRANCHLAB_GITHUB_APP_PRIVATE_KEY_FILE: /run/secrets/github-app.pem
+  BRANCHLAB_GITHUB_WEBHOOK_SECRET: ${BRANCHLAB_GITHUB_WEBHOOK_SECRET:-}
+  BRANCHLAB_GITHUB_ALLOWLIST_JSON: ${BRANCHLAB_GITHUB_ALLOWLIST_JSON:-[]}
+  BRANCHLAB_MODEL: ${BRANCHLAB_MODEL:-gpt-6-astra}
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    environment: *api-environment
+    volumes:
+      - evidence:/data
+      - ${BRANCHLAB_GITHUB_APP_PRIVATE_KEY_FILE:-./.branchlab/unconfigured-app.pem}:/run/secrets/github-app.pem:ro
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    restart: unless-stopped
+    environment:
+      BRANCHLAB_PUBLIC_ORIGIN: ${BRANCHLAB_PUBLIC_ORIGIN}
+      BRANCHLAB_OWNER_TOKEN: ${BRANCHLAB_OWNER_TOKEN:?Set a random owner login token}
+      BRANCHLAB_SESSION_SECRET: ${BRANCHLAB_SESSION_SECRET:?Set a random session secret}
+      BRANCHLAB_API_TOKEN: ${BRANCHLAB_API_TOKEN}
+      BRANCHLAB_API_URL: http://api:8765
+    depends_on:
+      api: {condition: service_healthy}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  https:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      BRANCHLAB_HOST: ${BRANCHLAB_HOST:?Set the DNS hostname pointing to this server}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [web, api]
+
+  worker:
+    profiles: [github]
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    command: [branchlab, app-worker]
+    environment:
+      <<: *api-environment
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      TMPDIR: ${BRANCHLAB_WORKSPACE:-/var/lib/branchlab-worker}
+    group_add: ["${DOCKER_GID:-0}"]
+    volumes:
+      - evidence:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${BRANCHLAB_WORKSPACE:-/var/lib/branchlab-worker}:${BRANCHLAB_WORKSPACE:-/var/lib/branchlab-worker}
+      - ${BRANCHLAB_GITHUB_APP_PRIVATE_KEY_FILE:-./.branchlab/unconfigured-app.pem}:/run/secrets/github-app.pem:ro
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+volumes:
+  evidence:
+  caddy-data:
+  caddy-config:

@@ -86,6 +86,21 @@ jobs:
           assert report['summary']['no_regression'] == 1, report['summary']
           assert report['findings'][0]['minimization']['minimized_steps'] == 2
           PY
+      - name: Replay the recorded live AI plan in Docker
+        run: |
+          branchlab investigate .branchlab/docker-fixture --base base --head head --plan examples/live-ai-plan.json --runner docker --output .branchlab/live-docker-runs
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(next(Path('.branchlab/live-docker-runs').glob('*/report.json')).read_text())
+          assert report['runner'] == 'docker'
+          assert report['provider']['name'] == 'supplied-plan'  # Replay, not another model call.
+          assert report['provider']['live_ai'] is False
+          assert report['summary']['suspected_regression'] == 1, report['summary']
+          assert report['summary']['intentional_change'] == 1, report['summary']
+          assert report['summary']['no_regression'] == 3, report['summary']
+          assert all(f['citation_validation']['valid'] for f in report['findings'])
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -93,6 +108,23 @@ jobs:
           path: |
             .branchlab/runs
             .branchlab/docker-fixture
+            .branchlab/live-docker-runs
           # This is the generated demo Git repository, not the checkout's credentials.
           include-hidden-files: true
           retention-days: 7
+  deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Generate ephemeral smoke configuration
+        run: python3 deploy/smoke.py prepare
+      - name: Build and start the actual HTTPS stack
+        run: docker compose --env-file .env.deploy -f compose.yml -f .branchlab/deploy-smoke/override.yml up --build -d
+      - name: Exercise login, protected evidence and real demo
+        run: python3 deploy/smoke.py verify
+      - name: Stop isolated smoke services
+        if: always()
+        run: docker compose --env-file .env.deploy -f compose.yml -f .branchlab/deploy-smoke/override.yml down -v

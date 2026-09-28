@@ -6,13 +6,14 @@
 | --- | --- |
 | `gitops` | Resolve immutable commits, validate/export Git trees, bound source context and static imports |
 | `github` | Read GitHub PR metadata, fetch exact objects and reject snapshot races |
+| `github_app` | Signed webhooks, durable queue, installation-scoped fetch and Check Runs |
 | `models` | Strict declarative plan schema and cross-reference validation |
-| `providers` | Tool-free Responses structured planning, optional trusted Codex adapter, exact citations |
+| `providers` | Tool-free Responses/OpenClaw planning, optional trusted Codex adapter, exact citations |
 | `runner` / `worker` | Fresh isolated executions, HTTP requests, typed checks, bounded results |
 | `engine` | Repeat runs, classify observations, reduce failing sequences, persist evidence |
 | `evaluate` | Named authored regression/control cases and measured fixture scorecard |
-| `api` / `cli` | Local evidence API, fixed demo trigger and explicit investigations/replay |
-| `web` | Next.js evidence workbench with restricted same-origin proxy |
+| `api` / `cli` | Authenticated evidence API, fixed demo, allowlisted PR queue and explicit investigations/replay |
+| `web` | Next.js evidence workbench, owner sessions, PR submission and restricted same-origin proxy |
 
 ## Classification
 
@@ -39,6 +40,10 @@ Each run directory contains `plan.json`, `report.json` and `report.md`. The orig
 
 Reports record full base/head SHAs, planner provenance, execution mode, repeats, timeout, runtime durations, validated source references, typed outcomes and limitations. A replay makes no model call, uses the recorded revisions, and does not re-minimize its input.
 
-## Deliberate first-release boundaries
+## Deployment and App boundary
 
-No queue service, webhook receiver, GitHub App installation, automatic fix generation, automatic merge, full dependency resolver, semantic program proof, multi-user deployment, or claimed benchmark against arbitrary repositories. These require more than adding another agent role. The first release concentrates on a testable evidence pipeline end to end.
+The HTTP service durably accepts signed, allowlisted PR metadata. A separate worker claims queue leases, resolves the same immutable PR snapshot through an installation-scoped token, plans and executes in Docker, and publishes a bounded Check Run. Crashed workers can be reclaimed; lease tokens fence late writers. Network delivery is not falsely called exactly once.
+
+Remote dashboard requests require a signed owner session. The Next server forwards its own API bearer token; the token is never returned to the browser. The webhook uses an independent HMAC secret instead. Provider credentials remain in the trusted planner/controller and are absent from test containers. Compose's shared absolute temporary path is required for sibling Docker mounts.
+
+No automatic fix generation, merge, full dependency resolver, semantic program proof, multi-user tenancy, or claimed benchmark against arbitrary repositories. Registration/installation and external DNS/TLS require operator-owned infrastructure and credentials; shipping the integration does not perform those actions implicitly.

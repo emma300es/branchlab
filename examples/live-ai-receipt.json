@@ -1,0 +1,128 @@
+{
+  "id": "run-20260928-195849-2f654db0",
+  "created_at": "2026-09-28T19:59:09.476080+00:00",
+  "provider": {
+    "name": "openclaw",
+    "model": "gpt-6-astra",
+    "upstream_provider": "openai",
+    "live_ai": true,
+    "input_tokens": null,
+    "output_tokens": null,
+    "tool_isolation": "OpenClaw infer model run is a lean completion with no tools or chat-agent turn.",
+    "schema_enforcement": "Local Pydantic validation; inference CLI does not enforce API structured outputs.",
+    "usage_limitation": "OpenClaw infer CLI does not return token usage."
+  },
+  "repository": {
+    "name": "live-completion-fixture",
+    "base_ref": "base",
+    "head_ref": "head",
+    "base_sha": "d0dae2d0ab0e56924ece9a0228ee927a0cbe52c9",
+    "head_sha": "fc96e5c7a6484a22faebfb76f8de29821cf1d9cc"
+  },
+  "summary": {
+    "suspected_regression": 1,
+    "intentional_change": 1,
+    "intent_unresolved": 0,
+    "no_regression": 3,
+    "flaky": 0,
+    "inconclusive": 0,
+    "invalid_baseline": 0
+  },
+  "runner": "subprocess",
+  "repeats": 2,
+  "plan_sha256": "e5f892a26659465a7d80d07f0ab05697feb84ea8c9ada7b13e976f99ed3634bc",
+  "citations_valid": true,
+  "findings": [
+    {
+      "id": "tenant-cache-isolation",
+      "classification": "suspected_regression",
+      "base_outcomes": [
+        "passed",
+        "passed"
+      ],
+      "head_outcomes": [
+        "failed",
+        "failed"
+      ],
+      "minimization": {
+        "original_steps": 3,
+        "minimized_steps": 3,
+        "attempts": 0,
+        "status": "unchanged"
+      }
+    },
+    {
+      "id": "settings-ttl",
+      "classification": "intentional_change",
+      "base_outcomes": [
+        "passed",
+        "passed"
+      ],
+      "head_outcomes": [
+        "failed",
+        "failed"
+      ],
+      "minimization": {
+        "original_steps": 1,
+        "minimized_steps": 1,
+        "attempts": 0,
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "unknown-tenant-cached-note",
+      "classification": "no_regression",
+      "base_outcomes": [
+        "passed",
+        "passed"
+      ],
+      "head_outcomes": [
+        "passed",
+        "passed"
+      ],
+      "minimization": {
+        "original_steps": 2,
+        "minimized_steps": 2,
+        "attempts": 0,
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "missing-note",
+      "classification": "no_regression",
+      "base_outcomes": [
+        "passed",
+        "passed"
+      ],
+      "head_outcomes": [
+        "passed",
+        "passed"
+      ],
+      "minimization": {
+        "original_steps": 1,
+        "minimized_steps": 1,
+        "attempts": 0,
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "health",
+      "classification": "no_regression",
+      "base_outcomes": [
+        "passed",
+        "passed"
+      ],
+      "head_outcomes": [
+        "passed",
+        "passed"
+      ],
+      "minimization": {
+        "original_steps": 1,
+        "minimized_steps": 1,
+        "attempts": 0,
+        "status": "not_applicable"
+      }
+    }
+  ],
+  "scope": "Actual GPT-6 Astra plan generated through supported tool-free OpenClaw inference, then executed on authored trusted fixture. Not a general model-accuracy benchmark. Token usage unavailable."
+}

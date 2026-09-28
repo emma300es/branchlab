@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "branchlab"
-version = "0.1.0"
+version = "0.2.0"
 description = "Intent-aware differential regression investigations with reproducible evidence"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "httpx>=0.28,<1", "pydantic>=2.10,<3", "openai>=1.75,<3", "typer>=0.15,<1"]
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "httpx>=0.28,<1", "pydantic>=2.10,<3", "openai>=1.75,<3", "typer>=0.15,<1", "cryptography>=44,<47"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<10", "ruff>=0.11,<1"]

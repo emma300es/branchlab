@@ -1,6 +1,6 @@
 {
   "name": "branchlab-dashboard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port 3000",
@@ -8,7 +8,8 @@
     "start": "next start --hostname 127.0.0.1 --port 3000",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test lib/*.test.ts",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:auth": "node scripts/auth-smoke.mjs"
   },
   "dependencies": {
     "next": "16.3.6",

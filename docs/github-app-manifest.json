@@ -1,0 +1,17 @@
+{
+  "name": "BranchLab",
+  "url": "https://github.com/emma300es/branchlab",
+  "description": "Intent-aware differential regression investigations with reproducible evidence.",
+  "public": false,
+  "hook_attributes": {
+    "url": "https://YOUR-BRANCHLAB-HOST.example/api/github/webhook",
+    "active": true
+  },
+  "default_permissions": {
+    "contents": "read",
+    "pull_requests": "read",
+    "checks": "write",
+    "metadata": "read"
+  },
+  "default_events": ["pull_request"]
+}

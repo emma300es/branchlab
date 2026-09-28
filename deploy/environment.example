@@ -1,0 +1,17 @@
+# Copy to .env.deploy (gitignored). Set these locally, never in issue/chat text.
+BRANCHLAB_PUBLIC_ORIGIN=https://branchlab.example.com
+BRANCHLAB_HOST=branchlab.example.com
+BRANCHLAB_OWNER_TOKEN=
+BRANCHLAB_SESSION_SECRET=
+BRANCHLAB_API_TOKEN=
+BRANCHLAB_MODEL=gpt-6-astra
+# Optional GitHub App worker: see docs/GITHUB_APP.md.
+OPENAI_API_KEY=
+BRANCHLAB_GITHUB_APP_ID=
+BRANCHLAB_GITHUB_APP_PRIVATE_KEY_FILE=/absolute/path/to/github-app.pem
+BRANCHLAB_GITHUB_WEBHOOK_SECRET=
+BRANCHLAB_GITHUB_ALLOWLIST_JSON=[]
+# Shared absolute host/container path; owner UID 10001 needs read/write access.
+BRANCHLAB_WORKSPACE=/var/lib/branchlab-worker
+# Host Docker socket's numeric group ID; only the trusted worker gets this.
+DOCKER_GID=0
