@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import socket
 import ssl
 import sys
 import time
@@ -46,18 +47,28 @@ def prepare():
 
 
 def request(path, method="GET", body=None, cookie=None, origin="https://branchlab.test"):
-    connection = http.client.HTTPSConnection("127.0.0.1", timeout=120, context=ssl._create_unverified_context())
+    context = ssl._create_unverified_context()
+    connection = http.client.HTTPSConnection("branchlab.test", timeout=120, context=context)
     headers = {"Host": "branchlab.test"}
     if cookie:
         headers["Cookie"] = cookie
     if body is not None:
         headers.update({"Content-Type": "application/json", "Origin": origin})
         body = json.dumps(body)
-    connection.request(method, path, body, headers)
-    response = connection.getresponse()
-    result = response.status, dict(response.getheaders()), response.read()
-    connection.close()
-    return result
+    # Keep transport on loopback but send the named site's TLS SNI. An HTTP Host
+    # header alone cannot select Caddy's certificate during the earlier handshake.
+    try:
+        raw_socket = socket.create_connection(("127.0.0.1", 443), timeout=120)
+        try:
+            connection.sock = context.wrap_socket(raw_socket, server_hostname="branchlab.test")
+        except BaseException:
+            raw_socket.close()
+            raise
+        connection.request(method, path, body, headers)
+        response = connection.getresponse()
+        return response.status, dict(response.getheaders()), response.read()
+    finally:
+        connection.close()
 
 
 def verify():
