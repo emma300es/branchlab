@@ -10,6 +10,8 @@ BranchLab v0.2 targets **Python/FastAPI applications**, not arbitrary code-revie
 
 ## The demo
 
+[Watch the working-demo video](https://github.com/emma300es/branchlab/releases/download/v0.2.0/branchlab-demo.mp4). The recording executes the included authored fixture and inspects its real results; it is not a new AI planning call. Use the quick start below to reproduce it locally.
+
 A developer raises a cache TTL and “simplifies” a cache key. BranchLab separates three outcomes:
 
 - **Suspected regression:** warming tenant Alpha's cache makes tenant Beta receive Alpha's private note.
